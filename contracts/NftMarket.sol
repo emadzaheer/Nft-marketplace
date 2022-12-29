@@ -32,7 +32,7 @@ contract DeMarketplace is ERC721URIStorage {
     event MarketItemBought(
         uint256 indexed tokenId,
         address owner,
-        uint256 price,
+        uint256 indexed price,
         address payable seller,
         bool sold,
         bool islisted
@@ -71,7 +71,7 @@ contract DeMarketplace is ERC721URIStorage {
         _;
     }
 
-    function updateListingPrice(uint256 _listingPrice) public payable isOwner {   //in prog
+    function updateListingPrice(uint256 _listingPrice) public isOwner {   //in prog
         listingPrice = _listingPrice;
     }
 
@@ -79,15 +79,16 @@ contract DeMarketplace is ERC721URIStorage {
         return listingPrice;
     }
 
-    function getLatestListedToken() public view returns (S_MarketItem memory) {
+    function getLatestToken() public view returns (S_MarketItem memory) {
         return m_marketItems[_tokenIds.current()];
     }
 
     function mintToken(string memory _tokenURI) public returns (uint256) {
 
+        
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current(); //tip: dont forget the brackets
-        _setTokenURI(newTokenId, _tokenURI);
+        
 
         m_marketItems[newTokenId] = S_MarketItem(
             newTokenId,
@@ -99,6 +100,7 @@ contract DeMarketplace is ERC721URIStorage {
         );
 
         _mint(msg.sender, newTokenId);
+        _setTokenURI(newTokenId, _tokenURI);
         _transfer(msg.sender, address(this), newTokenId); //we send the asset to the contract when we mint it.
 
         emit MarketItemMinted(
@@ -129,7 +131,7 @@ contract DeMarketplace is ERC721URIStorage {
         
         emit MarketItemListed(
             _tokenId,
-            m_marketItems[_tokenId].owner ,
+            m_marketItems[_tokenId].owner,
             _tokenPrice,
             payable(msg.sender),
             false,
@@ -144,10 +146,10 @@ contract DeMarketplace is ERC721URIStorage {
         
         address payable seller = m_marketItems[_tokenId].seller;
         require(m_marketItems[_tokenId].tokenId != 0,"token does not exist" );
-        require(msg.sender != seller, "seller cannot buy their own token");
-        require(msg.value == (m_marketItems[_tokenId].price + listingPrice), "you have provided insufficient funds");
         require(m_marketItems[_tokenId].islisted == true, "Token is not listed for sale");
-
+        require(msg.sender != seller, "seller cannot buy their own token");
+        require(msg.value == (m_marketItems[_tokenId].price + listingPrice), "you have provided incorrect funds");
+        
         m_marketItems[_tokenId].sold        = true;
         m_marketItems[_tokenId].islisted    = false;
         m_marketItems[_tokenId].owner       = payable(msg.sender); //function caller who buys the item is now the owner
@@ -172,7 +174,7 @@ contract DeMarketplace is ERC721URIStorage {
         //return 
     }
 
-    function relistTokenForSale(uint256 _tokenId, uint256 _tokenPrice) public payable {
+    function relistTokenForSale(uint256 _tokenId, uint256 _tokenPrice) public {
         
         require(m_marketItems[_tokenId].tokenId != 0,"token does not exist" );
         require(msg.sender == m_marketItems[_tokenId].owner && msg.sender == m_marketItems[_tokenId].seller , "you should be the owner to resell this item");
@@ -220,7 +222,7 @@ contract DeMarketplace is ERC721URIStorage {
         return unsoldItems;
     }
 
-    function purchased_items() public view returns (S_MarketItem[] memory) {
+    function getOwnedItems() public view returns (S_MarketItem[] memory) {
         uint256 totalCount = _tokenIds.current();
         uint256 itemCount = 0;
         uint256 currentIndex = 0;
@@ -243,13 +245,13 @@ contract DeMarketplace is ERC721URIStorage {
         return Items;
     }
 
-    function get_seller_items() public view returns (S_MarketItem[] memory) {
+    function getSellerItems() public view returns (S_MarketItem[] memory) {        
         uint256 totalCount = _tokenIds.current();
         uint256 itemCount = 0;
         uint256 currentIndex = 0;
 
         for (uint256 i = 0; i < totalCount; i++) {
-            if (m_marketItems[i + 1].seller == msg.sender) {
+            if (m_marketItems[i + 1].seller == msg.sender ){
                 itemCount += 1;
             }
         }
@@ -266,4 +268,3 @@ contract DeMarketplace is ERC721URIStorage {
         return Items;
     }
 }
-
